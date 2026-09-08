@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 
 const connectDB = require("./src/config/db");
+const authRoutes = require("./src/routes/authRoutes");
 
 const app = express();
 
@@ -17,6 +18,8 @@ app.get("/", (req, res) => {
         message: "Trello Task Manager API is running"
     });
 });
+
+app.use("/api/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
 
