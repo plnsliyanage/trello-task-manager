@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import api from "@/utils/api";
@@ -17,21 +18,27 @@ const COLUMNS = ["To Do", "Doing", "Done"];
 const columnConfig = {
   "To Do": {
     icon: CircleDot,
-    badgeColor: "bg-amber-500/10 text-amber-600 border-amber-200/60",
-    headerBg: "border-amber-500/30",
+    badgeColor: "bg-amber-50 text-amber-700 border-amber-200",
+    headerBg: "border-amber-200",
     dotColor: "bg-amber-500",
+    iconColor: "text-amber-600",
+    emptyText: "No tasks to do",
   },
   Doing: {
     icon: Clock,
-    badgeColor: "bg-indigo-500/10 text-indigo-600 border-indigo-200/60",
-    headerBg: "border-indigo-500/30",
+    badgeColor: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    headerBg: "border-indigo-200",
     dotColor: "bg-indigo-500",
+    iconColor: "text-indigo-600",
+    emptyText: "No tasks in progress",
   },
   Done: {
     icon: CheckCircle2,
-    badgeColor: "bg-emerald-500/10 text-emerald-600 border-emerald-200/60",
-    headerBg: "border-emerald-500/30",
+    badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    headerBg: "border-emerald-200",
     dotColor: "bg-emerald-500",
+    iconColor: "text-emerald-600",
+    emptyText: "No completed tasks",
   },
 };
 
@@ -83,10 +90,12 @@ export default function KanbanBoard({ refreshTrigger }) {
 
   const handleAssignChange = async (taskId, newAssigneeId) => {
     const targetId = newAssigneeId === "" ? null : newAssigneeId;
+
     try {
       const res = await api.patch(`/tasks/${taskId}`, {
         assignedUser: targetId,
       });
+
       setTasks((prev) => prev.map((t) => (t._id === taskId ? res.data : t)));
     } catch (error) {
       alert(error.response?.data?.error || "Failed to update task assignment");
@@ -96,48 +105,78 @@ export default function KanbanBoard({ refreshTrigger }) {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-2 sm:p-4">
-        {COLUMNS.map((column) => {
-          const config = columnConfig[column];
-          const ColumnIcon = config.icon;
-          const count = tasks.filter((t) => t.status === column).length;
+      <div className="w-full overflow-x-auto pb-4">
+        <div className="grid min-w-[900px] grid-cols-3 gap-5 p-1 sm:gap-6 sm:p-2">
+          {COLUMNS.map((column) => {
+            const config = columnConfig[column];
+            const ColumnIcon = config.icon;
+            const columnTasks = tasks.filter((t) => t.status === column);
+            const count = columnTasks.length;
 
-          return (
-            <Droppable key={column} droppableId={column}>
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`flex flex-col rounded-2xl bg-slate-100/70 backdrop-blur-sm border border-slate-200/80 p-4 transition-colors duration-200 min-h-[650px] shadow-sm ${
-                    snapshot.isDraggingOver
-                      ? "bg-indigo-50/40 border-indigo-200"
-                      : ""
-                  }`}
-                >
-                  {/* Column Header */}
+            return (
+              <Droppable key={column} droppableId={column}>
+                {(provided, snapshot) => (
                   <div
-                    className={`flex items-center justify-between pb-3 mb-4 border-b ${config.headerBg}`}
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`flex min-h-[520px] flex-col rounded-2xl border p-4 transition-all duration-200 sm:p-5 ${
+                      snapshot.isDraggingOver
+                        ? "border-indigo-300 bg-indigo-50/70 shadow-lg shadow-indigo-100"
+                        : "border-slate-200 bg-slate-50/80"
+                    }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className={`h-2.5 w-2.5 rounded-full ${config.dotColor}`}
-                      />
-                      <h2 className="font-bold text-sm sm:text-base text-slate-800 tracking-tight flex items-center gap-2">
-                        {column}
-                      </h2>
-                    </div>
-                    <span
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${config.badgeColor}`}
+                    {/* Column Header */}
+                    <div
+                      className={`mb-4 flex items-center justify-between border-b pb-4 ${config.headerBg}`}
                     >
-                      {count}
-                    </span>
-                  </div>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-9 w-9 items-center justify-center rounded-xl ${config.badgeColor}`}
+                        >
+                          <ColumnIcon
+                            className={`h-4 w-4 ${config.iconColor}`}
+                          />
+                        </div>
 
-                  {/* Tasks Container */}
-                  <div className="flex-1 space-y-3.5">
-                    {tasks
-                      .filter((task) => task.status === column)
-                      .map((task, index) => (
+                        <div>
+                          <h2 className="text-sm font-bold text-slate-800 sm:text-base">
+                            {column}
+                          </h2>
+
+                          <p className="mt-0.5 text-[10px] font-medium text-slate-400">
+                            {count === 1 ? "1 task" : `${count} tasks`}
+                          </p>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`flex h-7 min-w-7 items-center justify-center rounded-full border px-2 text-xs font-bold ${config.badgeColor}`}
+                      >
+                        {count}
+                      </span>
+                    </div>
+
+                    {/* Tasks */}
+                    <div className="flex flex-1 flex-col gap-3">
+                      {columnTasks.length === 0 && !snapshot.isDraggingOver && (
+                        <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-white/40 px-4 py-10 text-center">
+                          <div
+                            className={`mb-3 flex h-10 w-10 items-center justify-center rounded-full ${config.badgeColor}`}
+                          >
+                            <ColumnIcon className="h-5 w-5" />
+                          </div>
+
+                          <p className="text-xs font-medium text-slate-400">
+                            {config.emptyText}
+                          </p>
+
+                          <p className="mt-1 text-[10px] text-slate-300">
+                            Drag a task here
+                          </p>
+                        </div>
+                      )}
+
+                      {columnTasks.map((task, index) => (
                         <Draggable
                           key={task._id}
                           draggableId={task._id}
@@ -148,79 +187,116 @@ export default function KanbanBoard({ refreshTrigger }) {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`group relative bg-white p-4 rounded-xl border border-slate-200/90 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all duration-200 space-y-3 ${
+                              className={`group relative rounded-2xl border bg-white p-4 transition-all duration-200 ${
                                 snapshot.isDragging
-                                  ? "shadow-2xl ring-2 ring-indigo-500/20 rotate-1 bg-white/95"
-                                  : ""
+                                  ? "rotate-1 border-indigo-300 shadow-2xl shadow-indigo-200/50 ring-2 ring-indigo-500/20"
+                                  : "border-slate-200 shadow-sm hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg hover:shadow-slate-200/60"
                               }`}
                             >
-                              <div className="flex items-start justify-between gap-2">
-                                <h3 className="font-semibold text-slate-900 text-sm tracking-tight leading-snug">
-                                  {task.title}
-                                </h3>
-                                <div className="text-slate-300 group-hover:text-slate-400 transition-colors shrink-0">
+                              {/* Drag Indicator */}
+                              <div className="absolute right-3 top-3">
+                                <div className="rounded-lg p-1 text-slate-300 transition-colors group-hover:bg-slate-100 group-hover:text-slate-400">
                                   <GripVertical className="h-4 w-4" />
                                 </div>
                               </div>
 
+                              {/* Task Title */}
+                              <div className="pr-7">
+                                <h3 className="text-sm font-bold leading-snug tracking-tight text-slate-900">
+                                  {task.title}
+                                </h3>
+                              </div>
+
+                              {/* Description */}
                               {task.description && (
-                                <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
+                                <p className="mt-2.5 line-clamp-2 text-xs leading-5 text-slate-500">
                                   {task.description}
                                 </p>
                               )}
 
-                              <div className="pt-3 border-t border-slate-100 flex flex-col space-y-2 text-xs text-slate-500">
-                                <div className="flex items-center gap-1.5">
-                                  <ShieldUser className="h-3.5 w-3.5 text-slate-400" />
-                                  <span>Creator:</span>
-                                  <span className="font-medium text-slate-700">
-                                    {task.creator?.username || "Unknown"}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center justify-between pt-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <User className="h-3.5 w-3.5 text-slate-400" />
-                                    <span>Assigned:</span>
+                              {/* Task Details */}
+                              <div className="mt-4 space-y-2.5 border-t border-slate-100 pt-3">
+                                {/* Creator */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                                    <ShieldUser className="h-3.5 w-3.5 text-slate-500" />
                                   </div>
 
-                                  {user?.role === "admin" ? (
-                                    <select
-                                      value={task.assignedUser?._id || ""}
-                                      onChange={(e) =>
-                                        handleAssignChange(
-                                          task._id,
-                                          e.target.value,
-                                        )
-                                      }
-                                      className="border border-slate-200 bg-slate-50 hover:bg-white focus:bg-white rounded-lg px-2 py-1 text-xs text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all cursor-pointer shadow-inner"
-                                    >
-                                      <option value="">Unassigned</option>
-                                      {users.map((u) => (
-                                        <option key={u._id} value={u._id}>
-                                          {u.username}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">
-                                      {task.assignedUser?.username ||
-                                        "Unassigned"}
-                                    </span>
-                                  )}
+                                  <div className="min-w-0">
+                                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                                      Creator
+                                    </p>
+
+                                    <p className="truncate text-xs font-semibold text-slate-700">
+                                      {task.creator?.username || "Unknown"}
+                                    </p>
+                                  </div>
                                 </div>
+
+                                {/* Assigned User */}
+                                <div className="flex items-center gap-2">
+                                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+                                    <User className="h-3.5 w-3.5 text-indigo-500" />
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                                      Assigned
+                                    </p>
+
+                                    {user?.role === "admin" ? (
+                                      <select
+                                        value={task.assignedUser?._id || ""}
+                                        onChange={(e) =>
+                                          handleAssignChange(
+                                            task._id,
+                                            e.target.value,
+                                          )
+                                        }
+                                        className="mt-0.5 max-w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs font-semibold text-slate-700 outline-none transition-all hover:bg-white focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-500/10"
+                                      >
+                                        <option value="">Unassigned</option>
+
+                                        {users.map((u) => (
+                                          <option key={u._id} value={u._id}>
+                                            {u.username}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <p className="mt-0.5 truncate text-xs font-semibold text-slate-700">
+                                        {task.assignedUser?.username ||
+                                          "Unassigned"}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Status Indicator */}
+                              <div className="mt-4 flex items-center justify-between">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold ${config.badgeColor}`}
+                                >
+                                  <span
+                                    className={`h-1.5 w-1.5 rounded-full ${config.dotColor}`}
+                                  />
+                                  {column}
+                                </span>
                               </div>
                             </div>
                           )}
                         </Draggable>
                       ))}
-                    {provided.placeholder}
+
+                      {provided.placeholder}
+                    </div>
                   </div>
-                </div>
-              )}
-            </Droppable>
-          );
-        })}
+                )}
+              </Droppable>
+            );
+          })}
+        </div>
       </div>
     </DragDropContext>
   );
