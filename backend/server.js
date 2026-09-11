@@ -5,7 +5,7 @@ const cors = require("cors");
 
 const connectDB = require("./src/config/db");
 const authRoutes = require("./src/routes/authRoutes");
-const taskRoutes = require("./src/routes/taskRoutes"); // ADD THIS
+const taskRoutes = require("./src/routes/taskRoutes");
 
 const app = express();
 
@@ -21,10 +21,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-app.use("/api/tasks", taskRoutes); // ADD THIS
+app.use("/api/tasks", taskRoutes);
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+// Export the app for Vercel
+module.exports = app;
